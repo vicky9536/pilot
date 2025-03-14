@@ -1,0 +1,20 @@
+# Core FastAPI dependencies
+fastapi==0.103.2
+uvicorn==0.23.2
+
+# LangChain & Pinecone dependencies
+langchain==0.1.0
+pinecone-client==2.2.2
+sentence-transformers==2.2.2  # Required for HuggingFace Embeddings
+
+# OpenAI for GPT-based question answering
+openai==1.2.3
+
+# Environment variable management
+python-dotenv==1.0.0
+
+# PDF processing
+pypdf==3.15.2  # For extracting text from PDFs
+
+# Logging & debugging utilities
+loguru==0.7.2
