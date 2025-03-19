@@ -1,27 +1,42 @@
 import os
-from langchain.vectorstores import Pinecone
-from langchain.embeddings.huggingface import HuggingFaceEmbeddings
-from langchain.chains.qa_with_sources import RetrievalQAWithSourcesChain
+import faiss
+from langchain.vectorstores import FAISS
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain.chains import RetrievalQA
 from langchain.llms import OpenAI
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.document_loaders import PyPDFLoader
-from pinecone import Pinecone
+from langchain.storage import InMemoryStore
+from app.config import FAISS_INDEX_PATH
 from typing import List, Dict
 
-# Load environment variables (Optional: If you store API keys in .env)
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "your_pinecone_api_key")
-INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "ohanadata")
+embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
 
-# Initialize Pinecone
-pc = Pinecone(api_key=PINECONE_API_KEY)
-vectorstore = Pinecone.from_documents([], embedding=HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2"), index_name=INDEX_NAME)
+sample_embedding = embedding_model.embed_query("test text")
+embedding_dimension = len(sample_embedding)
+
+if os.path.exists(FAISS_INDEX_PATH):
+    vectorstore = FAISS.load_local(FAISS_INDEX_PATH, embeddings=embedding_model)
+else:
+    index = faiss.IndexFlatL2(embedding_dimension)
+    docstore = InMemoryStore()
+    index_to_docstore_id = InMemoryStore()
+
+    vectorstore = FAISS(
+        index=index,
+        embedding_function=embedding_model,
+        docstore=docstore,
+        index_to_docstore_id=index_to_docstore_id
+    )
 
 # Load LLM for question answering
 llm = OpenAI(model_name="gpt-4", temperature=0)
 
-# ------------------------------
+# Create QA chain
+retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
+qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
+
 # DOCUMENT INDEXING FUNCTION
-# ------------------------------
 def process_pdf(file_path: str, file_name: str):
     """
     Loads a PDF, splits it into chunks, and indexes it into Pinecone for retrieval.
@@ -35,8 +50,9 @@ def process_pdf(file_path: str, file_name: str):
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
         split_docs = text_splitter.split_documents(documents)
 
-        # Store in Pinecone with unique IDs
-        vectorstore.add_documents(split_docs, ids=[f"{file_name}_chunk_{i}" for i in range(len(split_docs))])
+        # Store in FAISS
+        vectorstore.add_documents(split_docs)
+        vectorstore.save_local(FAISS_INDEX_PATH)
 
         return {"message": "PDF processed and indexed successfully"}
 
@@ -44,9 +60,7 @@ def process_pdf(file_path: str, file_name: str):
         return {"error": str(e)}
 
 
-# ------------------------------
 # SEMANTIC SEARCH FUNCTION
-# ------------------------------
 def search_documents(query: str) -> List[str]:
     """
     Performs a semantic search over indexed PDF documents.
@@ -61,9 +75,7 @@ def search_documents(query: str) -> List[str]:
         return {"error": str(e)}
 
 
-# ------------------------------
 # QUESTION ANSWERING FUNCTION
-# ------------------------------
 def answer_question(query: str) -> Dict[str, List[str]]:
     """
     Answers a question based on retrieved PDF content.

@@ -4,7 +4,7 @@ uvicorn==0.23.2
 
 # LangChain & Pinecone dependencies
 langchain==0.1.0
-pinecone-client==2.2.2
+Pinecone
 sentence-transformers==2.2.2  # Required for HuggingFace Embeddings
 
 # OpenAI for GPT-based question answering

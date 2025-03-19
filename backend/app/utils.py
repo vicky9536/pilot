@@ -9,9 +9,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 TEMP_DIR = "/tmp"
 
 
-# ------------------------------
 # LOCAL FILE MANAGEMENT UTILITIES
-# ------------------------------
 def save_temp_file(file_bytes: bytes, file_name: str) -> str:
     """
     Saves an uploaded file temporarily in the `/tmp/` directory.
@@ -66,9 +64,7 @@ def ensure_temp_dir():
         logging.info(f"Created temporary directory: {TEMP_DIR}")
 
 
-# ------------------------------
 # ERROR HANDLING UTILITIES
-# ------------------------------
 def handle_exception(error: Exception, message: str = "An error occurred") -> Dict[str, Any]:
     """
     Handles exceptions and logs errors.

@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI, UploadFile, File
 from app.config import FASTAPI_HOST, FASTAPI_PORT, DEBUG_MODE
-from app.database import add_documents_to_pinecone, search_pinecone
+from app.database import add_documents_to_faiss, search_faiss
 from app.qa_chain import answer_question, process_pdf
 from app.utils import save_temp_file, delete_temp_file, ensure_temp_dir, handle_exception
 from app.models import PDFUploadResponse, SearchRequest, SearchResult, AnswerRequest, AnswerResponse
@@ -29,7 +29,7 @@ async def upload_pdf(file: UploadFile = File(...)):
 
         # Process PDF (extract text & store in Pinecone)
         documents = process_pdf(file_path, file.filename)
-        add_documents_to_pinecone(documents, file.filename)
+        add_documents_to_faiss(documents, file.filename)
 
         # Delete local file after processing
         delete_temp_file(file_path)
@@ -47,7 +47,7 @@ def search_text(request_data: SearchRequest):
     Endpoint to perform semantic search on uploaded PDF documents.
     """
     try:
-        results = search_pinecone(request_data.query)
+        results = search_faiss(request_data.query)
         return {"results": results}
 
     except Exception as e:
